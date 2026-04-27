@@ -40,10 +40,23 @@ python -m novelcraft_agent path/to/novel.txt --iterations 3
 - `--polish-model`
 - `--iterations`
 - `--tail-chars`
+- `--analysis-context-chars`
+- `--polish-context-chars`
+- `--num-ctx`
+- `--writer-num-predict`
+- `--polish-num-predict`
+- `--analysis-num-predict`
+- `--director-num-predict`
+- `--temperature`
+- `--top-p`
+- `--min-part-chars`
+- `--retry-short-output` / `--no-retry-short-output`
+- `--min-polish-ratio` (default: `0.9`)
 - `--out-dir`
 - `--skills-dir`
 - `--no-polish`
 - `--show-thinking`
+- `--stream-planning`
 - `--mock` (run without Ollama; deterministic test output)
 - `--verbose`
 - `--preview-chars`
@@ -57,6 +70,19 @@ python -m novelcraft_agent novel_25463845/novel_25463845.txt \
   --iterations 3 \
   --tail-chars 5000 \
   --preview-chars 800
+```
+
+### Recommended command
+
+```bash
+python -m novelcraft_agent data/novel_17549812/novel.txt \
+  --model 'huihui_ai/Qwen3.6-abliterated:27b' \
+  --iterations 3 \
+  --tail-chars 12000 \
+  --analysis-context-chars 8000 \
+  --polish-context-chars 6000 \
+  --writer-num-predict 2200 \
+  --min-part-chars 1500
 ```
 
 ### Example (no Ollama required)
@@ -76,9 +102,11 @@ Generated files:
 - `<stem>_final_<timestamp>.txt` (continuation only)
 - `<stem>_with_continuation_<timestamp>.txt` (original + continuation)
 - `<stem>_state_history_<timestamp>.json` (analysis/direction by iteration)
+- `story_memory.json` (compact memory updated each iteration and saved at run end)
 - Per-iteration artifacts:
   - `<stem>_<timestamp>_part_001_analysis.json`
   - `<stem>_<timestamp>_part_001_direction.json`
+  - `<stem>_<timestamp>_part_001_story_memory.json`
   - `<stem>_<timestamp>_part_001_writer_part.txt`
   - `<stem>_<timestamp>_part_001_polished_part.txt`
   - `<stem>_<timestamp>_part_001_final_part.txt`
