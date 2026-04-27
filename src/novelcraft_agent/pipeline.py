@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
 from .cleaner import clean_generated_text, extract_json_block
 from .io import IterationArtifacts
-from .ollama_client import OllamaClient
+from .ollama_client import GenerationResult
 from .prompts import analyzer_prompt, director_prompt, polish_prompt, writer_prompt
 from .skills import load_skills
 
@@ -30,6 +30,17 @@ class PipelineResult:
     continuation: str
     state_history: list[dict[str, Any]]
     artifacts: list[IterationArtifacts]
+
+
+class GeneratorClient(Protocol):
+    def generate_stream(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        on_response_chunk: Callable[[str], None] | None = None,
+        on_thinking_chunk: Callable[[str], None] | None = None,
+    ) -> GenerationResult: ...
 
 
 def _select_model(primary: str | None, fallback: str) -> str:
@@ -60,7 +71,7 @@ def run_pipeline(
     input_text: str,
     skills_dir: Path,
     config: PipelineConfig,
-    client: OllamaClient,
+    client: GeneratorClient,
     on_stream: Callable[[str], None] | None = None,
     on_phase: Callable[[str], None] | None = None,
     on_thinking: Callable[[str], None] | None = None,

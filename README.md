@@ -12,10 +12,9 @@ Analyzer → Director → Skill Selection → Writer → Light Polish.
 ## Setup
 
 ```bash
-python -m venv .venv
+uv venv
 source .venv/bin/activate
-pip install -e .
-pip install pytest
+uv pip install -e . pytest
 ```
 
 ## Pull an Ollama model (example)
@@ -43,6 +42,7 @@ python -m novelcraft_agent path/to/novel.txt --iterations 3
 - `--skills-dir`
 - `--no-polish`
 - `--show-thinking`
+- `--mock` (run without Ollama; deterministic test output)
 - `--verbose`
 - `--preview-chars`
 
@@ -54,6 +54,12 @@ python -m novelcraft_agent novel_25463845/novel_25463845.txt \
   --iterations 3 \
   --tail-chars 5000 \
   --preview-chars 800
+```
+
+### Mock example (no Ollama needed)
+
+```bash
+python -m novelcraft_agent examples/sample_novel.txt --iterations 1 --mock --verbose
 ```
 
 ## Output files
@@ -121,5 +127,9 @@ The cleaner removes `<think>...</think>`, `Thinking...done thinking.`, ANSI esca
 ## Tests
 
 ```bash
-pytest
+uv run pytest
 ```
+
+## Runtime dependencies
+
+The runtime uses only Python standard library modules. Packaging/build tooling (`setuptools`, `wheel`) and test tooling (`pytest`) are development-time only.
