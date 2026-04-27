@@ -7,17 +7,19 @@ Analyzer → Director → Skill Selection → Writer → Light Polish.
 ## Requirements
 
 - Python 3.11+
-- Ollama running locally at `http://127.0.0.1:11434`
+- Ollama running locally at `http://127.0.0.1:11434` (not required when `--mock` / `--dry-run` is used)
 
-## Setup
+## Setup (uv-friendly)
 
 ```bash
 uv venv
-source .venv/bin/activate
 uv pip install -e . pytest
+uv run pytest
 ```
 
 ## Pull an Ollama model (example)
+
+Default model is `llama3.1`.
 
 ```bash
 ollama pull llama3.1
@@ -31,7 +33,7 @@ python -m novelcraft_agent path/to/novel.txt --iterations 3
 
 ### Options
 
-- `--model`
+- `--model` (default: `llama3.1`)
 - `--analyzer-model`
 - `--director-model`
 - `--writer-model`
@@ -45,8 +47,9 @@ python -m novelcraft_agent path/to/novel.txt --iterations 3
 - `--mock` (run without Ollama; deterministic test output)
 - `--verbose`
 - `--preview-chars`
+- `--mock` / `--dry-run` (deterministic fake client; no Ollama daemon)
 
-### Example
+### Example (real Ollama)
 
 ```bash
 python -m novelcraft_agent novel_25463845/novel_25463845.txt \
@@ -56,7 +59,7 @@ python -m novelcraft_agent novel_25463845/novel_25463845.txt \
   --preview-chars 800
 ```
 
-### Mock example (no Ollama needed)
+### Example (no Ollama required)
 
 ```bash
 python -m novelcraft_agent examples/sample_novel.txt --iterations 1 --mock --verbose
@@ -107,7 +110,7 @@ Create a markdown file in your skills directory using this structure:
 ...
 ```
 
-The director can only choose from loaded skill names.
+The director can only choose from loaded skill names. Unknown skill selections fail fast with an error.
 
 ## Troubleshooting
 

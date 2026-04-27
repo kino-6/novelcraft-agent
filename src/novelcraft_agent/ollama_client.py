@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import ast
 import json
 from dataclasses import dataclass
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Protocol
 from urllib import request
 
 from .cleaner import strip_ansi
@@ -16,9 +17,7 @@ class GenerationResult:
     thinking: str
 
 
-class MockOllamaClient:
-    """Deterministic client for local pipeline smoke tests."""
-
+class TextGenerationClient(Protocol):
     def generate_stream(
         self,
         *,
@@ -26,26 +25,7 @@ class MockOllamaClient:
         prompt: str,
         on_response_chunk: Callable[[str], None] | None = None,
         on_thinking_chunk: Callable[[str], None] | None = None,
-    ) -> GenerationResult:
-        _ = (model, on_thinking_chunk)
-        if "You are a story analyzer." in prompt:
-            response = (
-                '{"characters":["Ari"],"setting":"workshop","tone":"tense","plot_state":"unstable",'
-                '"open_loops":["letter"],"foreshadowing":[],"must_preserve":["voice"],"style_notes":[]}'
-            )
-        elif "You are a story director." in prompt:
-            response = (
-                '{"intent":"advance","focus_character":"protagonist","scene_goal":"move scene",'
-                '"selected_skill":"character_conflict","reason":"raise stakes","avoid":["summary"],'
-                '"ending_style":"hook","length_target":"short"}'
-            )
-        elif "Lightly polish the passage." in prompt:
-            response = "The corridor light trembled once, and Ari kept walking."
-        else:
-            response = "Ari folded the letter and stepped into the dark corridor."
-        if on_response_chunk:
-            on_response_chunk(response)
-        return GenerationResult(response=response, thinking="")
+    ) -> GenerationResult: ...
 
 
 class OllamaClient:
@@ -94,3 +74,80 @@ class OllamaClient:
             if not line:
                 continue
             yield json.loads(line)
+
+
+class MockOllamaClient:
+    """Deterministic client for local testing without an Ollama daemon."""
+
+    def __init__(self) -> None:
+        self.iteration = 0
+
+    def generate_stream(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        on_response_chunk: Callable[[str], None] | None = None,
+        on_thinking_chunk: Callable[[str], None] | None = None,
+    ) -> GenerationResult:
+        _ = model
+        _ = on_thinking_chunk
+        response = self._response_for_prompt(prompt)
+        if on_response_chunk:
+            on_response_chunk(response)
+        return GenerationResult(response=response, thinking="")
+
+    def _response_for_prompt(self, prompt: str) -> str:
+        if prompt.startswith("You are a story analyzer"):
+            self.iteration += 1
+            return json.dumps(
+                {
+                    "characters": ["Sample Protagonist"],
+                    "setting": "A moonlit library",
+                    "tone": "reflective",
+                    "plot_state": f"iteration_{self.iteration}",
+                    "open_loops": ["hidden letter"],
+                    "foreshadowing": ["a locked drawer"],
+                    "must_preserve": ["first-person voice"],
+                    "style_notes": ["short paragraphs"],
+                }
+            )
+
+        if prompt.startswith("You are a story director"):
+            skills = self._extract_skill_names(prompt)
+            selected = skills[0] if skills else "unknown"
+            return json.dumps(
+                {
+                    "intent": "Increase tension while preserving continuity",
+                    "focus_character": "Sample Protagonist",
+                    "scene_goal": "Reveal a clue and raise a question",
+                    "selected_skill": selected,
+                    "reason": "First listed skill keeps behavior deterministic",
+                    "avoid": ["ending the story"],
+                    "ending_style": "hook",
+                    "length_target": "short",
+                }
+            )
+
+        if prompt.startswith("Lightly polish the passage"):
+            return "The letter slid free, and a single line changed everything."
+
+        return "The drawer clicked open, and the envelope waited beneath the dust."
+
+    @staticmethod
+    def _extract_skill_names(prompt: str) -> list[str]:
+        marker = "Output JSON only with this exact shape:"
+        if marker not in prompt:
+            return []
+        prefix = prompt.split(marker, 1)[0]
+        lines = [line.strip() for line in prefix.splitlines() if line.strip()]
+        if not lines:
+            return []
+        raw = lines[-1]
+        try:
+            parsed = ast.literal_eval(raw)
+        except (SyntaxError, ValueError):
+            return []
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed]
+        return []

@@ -7,7 +7,7 @@ from typing import Any, Callable, Protocol
 
 from .cleaner import clean_generated_text, extract_json_block
 from .io import IterationArtifacts
-from .ollama_client import GenerationResult
+from .ollama_client import TextGenerationClient
 from .prompts import analyzer_prompt, director_prompt, polish_prompt, writer_prompt
 from .skills import load_skills
 
@@ -57,7 +57,7 @@ def _validate_selected_skill(selected: str, available: dict[str, Any]) -> str:
     lowered = {k.lower(): k for k in available}
     if selected.lower() in lowered:
         return lowered[selected.lower()]
-    raise ValueError(f"Director selected unknown skill: {selected}")
+    raise ValueError(f"Director selected unknown skill: {selected}. Allowed: {sorted(available)}")
 
 
 def should_discard_polish(writer_text: str, polished_text: str, threshold: float = 0.85) -> bool:
@@ -71,7 +71,7 @@ def run_pipeline(
     input_text: str,
     skills_dir: Path,
     config: PipelineConfig,
-    client: GeneratorClient,
+    client: TextGenerationClient,
     on_stream: Callable[[str], None] | None = None,
     on_phase: Callable[[str], None] | None = None,
     on_thinking: Callable[[str], None] | None = None,

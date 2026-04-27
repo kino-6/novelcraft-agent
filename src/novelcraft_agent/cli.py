@@ -4,14 +4,17 @@ import argparse
 from pathlib import Path
 
 from .io import resolve_output_dir, save_outputs, timestamp_utc
-from .ollama_client import MockOllamaClient, OllamaClient
+from .ollama_client import MockOllamaClient, OllamaClient, TextGenerationClient
 from .pipeline import PipelineConfig, run_pipeline
+
+
+DEFAULT_MODEL = "llama3.1"
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Continue a novel text file with Ollama.")
     parser.add_argument("input_path", type=Path)
-    parser.add_argument("--model", default="llama3.1")
+    parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--analyzer-model")
     parser.add_argument("--director-model")
     parser.add_argument("--writer-model")
@@ -25,6 +28,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mock", action="store_true", help="Run without Ollama using deterministic mock output.")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--preview-chars", type=int, default=600)
+    parser.add_argument(
+        "--mock",
+        "--dry-run",
+        dest="mock",
+        action="store_true",
+        help="Use a deterministic local mock client (no Ollama server required).",
+    )
     return parser
 
 
@@ -35,6 +45,10 @@ def _phase_printer(verbose: bool):
             print("processing...")
 
     return inner
+
+
+def _build_client(use_mock: bool) -> TextGenerationClient:
+    return MockOllamaClient() if use_mock else OllamaClient()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -58,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
         show_thinking=args.show_thinking,
     )
 
-    client = MockOllamaClient() if args.mock else OllamaClient()
+    client = _build_client(args.mock)
     stream = lambda chunk: print(chunk, end="", flush=True)
     think = (lambda chunk: print(chunk, end="", flush=True)) if args.show_thinking else None
     result = run_pipeline(
