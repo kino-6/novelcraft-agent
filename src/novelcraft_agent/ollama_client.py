@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from dataclasses import dataclass
 from typing import Callable, Iterator, Protocol
 from urllib import request
@@ -23,6 +24,7 @@ class TextGenerationClient(Protocol):
         *,
         model: str,
         prompt: str,
+        options: dict | None = None,
         on_response_chunk: Callable[[str], None] | None = None,
         on_thinking_chunk: Callable[[str], None] | None = None,
     ) -> GenerationResult: ...
@@ -38,10 +40,14 @@ class OllamaClient:
         *,
         model: str,
         prompt: str,
+        options: dict | None = None,
         on_response_chunk: Callable[[str], None] | None = None,
         on_thinking_chunk: Callable[[str], None] | None = None,
     ) -> GenerationResult:
-        body = json.dumps({"model": model, "prompt": prompt, "stream": True}).encode("utf-8")
+        payload = {"model": model, "prompt": prompt, "stream": True}
+        if options:
+            payload["options"] = options
+        body = json.dumps(payload).encode("utf-8")
         req = request.Request(
             self.base_url,
             data=body,
@@ -87,10 +93,12 @@ class MockOllamaClient:
         *,
         model: str,
         prompt: str,
+        options: dict | None = None,
         on_response_chunk: Callable[[str], None] | None = None,
         on_thinking_chunk: Callable[[str], None] | None = None,
     ) -> GenerationResult:
         _ = model
+        _ = options
         _ = on_thinking_chunk
         response = self._response_for_prompt(prompt)
         if on_response_chunk:
@@ -136,6 +144,15 @@ class MockOllamaClient:
 
     @staticmethod
     def _extract_skill_names(prompt: str) -> list[str]:
+        map_match = re.search(r"(\{[^\n]*\})\nOutput JSON only with this exact shape:", prompt)
+        if map_match:
+            try:
+                parsed_map = json.loads(map_match.group(1))
+            except json.JSONDecodeError:
+                parsed_map = None
+            if isinstance(parsed_map, dict):
+                return [str(k) for k in parsed_map.keys()]
+
         marker = "Output JSON only with this exact shape:"
         if marker not in prompt:
             return []

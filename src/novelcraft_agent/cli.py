@@ -20,12 +20,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--writer-model")
     parser.add_argument("--polish-model")
     parser.add_argument("--iterations", type=int, default=3)
-    parser.add_argument("--tail-chars", type=int, default=4000)
+    parser.add_argument("--tail-chars", type=int, default=12000)
+    parser.add_argument("--analysis-context-chars", type=int, default=8000)
+    parser.add_argument("--polish-context-chars", type=int, default=6000)
+    parser.add_argument("--num-ctx", type=int, default=32768)
+    parser.add_argument("--writer-num-predict", type=int, default=2200)
+    parser.add_argument("--polish-num-predict", type=int, default=2200)
+    parser.add_argument("--analysis-num-predict", type=int, default=1000)
+    parser.add_argument("--director-num-predict", type=int, default=800)
+    parser.add_argument("--temperature", type=float, default=0.75)
+    parser.add_argument("--top-p", type=float, default=0.9)
+    parser.add_argument("--min-part-chars", type=int, default=1500)
+    parser.add_argument("--retry-short-output", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--min-polish-ratio", type=float, default=0.9)
     parser.add_argument("--out-dir")
     parser.add_argument("--skills-dir", default="skills")
     parser.add_argument("--no-polish", action="store_true")
     parser.add_argument("--show-thinking", action="store_true")
-    parser.add_argument("--mock", action="store_true", help="Run without Ollama using deterministic mock output.")
+    parser.add_argument("--stream-planning", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--preview-chars", type=int, default=600)
     parser.add_argument(
@@ -68,8 +80,21 @@ def main(argv: list[str] | None = None) -> int:
         polish_model=args.polish_model,
         iterations=args.iterations,
         tail_chars=args.tail_chars,
+        analysis_context_chars=args.analysis_context_chars,
+        polish_context_chars=args.polish_context_chars,
         no_polish=args.no_polish,
         show_thinking=args.show_thinking,
+        stream_planning=args.stream_planning,
+        num_ctx=args.num_ctx,
+        writer_num_predict=args.writer_num_predict,
+        polish_num_predict=args.polish_num_predict,
+        analysis_num_predict=args.analysis_num_predict,
+        director_num_predict=args.director_num_predict,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        min_part_chars=args.min_part_chars,
+        retry_short_output=args.retry_short_output,
+        min_polish_ratio=args.min_polish_ratio,
     )
 
     client = _build_client(args.mock)
@@ -94,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         original_text=source,
         state_history=result.state_history,
         artifacts=result.artifacts,
+        story_memory=result.story_memory,
         verbose=args.verbose,
     )
 
