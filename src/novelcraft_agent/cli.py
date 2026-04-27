@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from .io import resolve_output_dir, save_outputs, timestamp_utc
-from .ollama_client import OllamaClient
+from .ollama_client import MockOllamaClient, OllamaClient
 from .pipeline import PipelineConfig, run_pipeline
 
 
@@ -22,6 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skills-dir", default="skills")
     parser.add_argument("--no-polish", action="store_true")
     parser.add_argument("--show-thinking", action="store_true")
+    parser.add_argument("--mock", action="store_true", help="Run without Ollama using deterministic mock output.")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--preview-chars", type=int, default=600)
     return parser
@@ -57,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         show_thinking=args.show_thinking,
     )
 
-    client = OllamaClient()
+    client = MockOllamaClient() if args.mock else OllamaClient()
     stream = lambda chunk: print(chunk, end="", flush=True)
     think = (lambda chunk: print(chunk, end="", flush=True)) if args.show_thinking else None
     result = run_pipeline(
