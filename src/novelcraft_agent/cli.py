@@ -25,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skills-dir", default="skills")
     parser.add_argument("--no-polish", action="store_true")
     parser.add_argument("--show-thinking", action="store_true")
+    parser.add_argument("--mock", action="store_true", help="Run without Ollama using deterministic mock output.")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--preview-chars", type=int, default=600)
     parser.add_argument(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
 from .cleaner import clean_generated_text, extract_json_block
 from .io import IterationArtifacts
@@ -30,6 +30,17 @@ class PipelineResult:
     continuation: str
     state_history: list[dict[str, Any]]
     artifacts: list[IterationArtifacts]
+
+
+class GeneratorClient(Protocol):
+    def generate_stream(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        on_response_chunk: Callable[[str], None] | None = None,
+        on_thinking_chunk: Callable[[str], None] | None = None,
+    ) -> GenerationResult: ...
 
 
 def _select_model(primary: str | None, fallback: str) -> str:

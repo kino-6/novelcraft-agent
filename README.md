@@ -44,6 +44,7 @@ python -m novelcraft_agent path/to/novel.txt --iterations 3
 - `--skills-dir`
 - `--no-polish`
 - `--show-thinking`
+- `--mock` (run without Ollama; deterministic test output)
 - `--verbose`
 - `--preview-chars`
 - `--mock` / `--dry-run` (deterministic fake client; no Ollama daemon)
@@ -129,5 +130,9 @@ The cleaner removes `<think>...</think>`, `Thinking...done thinking.`, ANSI esca
 ## Tests
 
 ```bash
-pytest
+uv run pytest
 ```
+
+## Runtime dependencies
+
+The runtime uses only Python standard library modules. Packaging/build tooling (`setuptools`, `wheel`) and test tooling (`pytest`) are development-time only.
