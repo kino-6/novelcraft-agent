@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from novelcraft_agent.io import IterationArtifacts
+import pytest
+
 from novelcraft_agent.pipeline import PipelineConfig, run_pipeline, should_discard_polish
 from novelcraft_agent.ollama_client import GenerationResult
 
@@ -48,3 +49,22 @@ def test_skill_loading_and_final_assembly(tmp_path: Path) -> None:
     assert "part one polished" in result.continuation
     assert "part two" in result.continuation
     assert len(result.artifacts) == 2
+
+
+def test_director_must_select_loaded_skill(tmp_path: Path) -> None:
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    (skills_dir / "one.md").write_text("# one\n## Purpose\nX", encoding="utf-8")
+
+    outputs = [
+        '{"characters":[],"setting":"s","tone":"t","plot_state":"p","open_loops":[],"foreshadowing":[],"must_preserve":[],"style_notes":[]}',
+        '{"intent":"i","focus_character":"c","scene_goal":"g","selected_skill":"not_loaded","reason":"r","avoid":[],"ending_style":"hook","length_target":"short"}',
+    ]
+    fake = FakeClient(outputs)
+    with pytest.raises(ValueError, match="Director selected unknown skill"):
+        run_pipeline(
+            input_text="start",
+            skills_dir=skills_dir,
+            config=PipelineConfig(iterations=1, no_polish=True),
+            client=fake,
+        )

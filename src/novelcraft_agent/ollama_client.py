@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import ast
 import json
 from dataclasses import dataclass
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Protocol
 from urllib import request
 
 from .cleaner import strip_ansi
@@ -14,6 +15,17 @@ OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 class GenerationResult:
     response: str
     thinking: str
+
+
+class TextGenerationClient(Protocol):
+    def generate_stream(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        on_response_chunk: Callable[[str], None] | None = None,
+        on_thinking_chunk: Callable[[str], None] | None = None,
+    ) -> GenerationResult: ...
 
 
 class OllamaClient:
@@ -62,3 +74,80 @@ class OllamaClient:
             if not line:
                 continue
             yield json.loads(line)
+
+
+class MockOllamaClient:
+    """Deterministic client for local testing without an Ollama daemon."""
+
+    def __init__(self) -> None:
+        self.iteration = 0
+
+    def generate_stream(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        on_response_chunk: Callable[[str], None] | None = None,
+        on_thinking_chunk: Callable[[str], None] | None = None,
+    ) -> GenerationResult:
+        _ = model
+        _ = on_thinking_chunk
+        response = self._response_for_prompt(prompt)
+        if on_response_chunk:
+            on_response_chunk(response)
+        return GenerationResult(response=response, thinking="")
+
+    def _response_for_prompt(self, prompt: str) -> str:
+        if prompt.startswith("You are a story analyzer"):
+            self.iteration += 1
+            return json.dumps(
+                {
+                    "characters": ["Sample Protagonist"],
+                    "setting": "A moonlit library",
+                    "tone": "reflective",
+                    "plot_state": f"iteration_{self.iteration}",
+                    "open_loops": ["hidden letter"],
+                    "foreshadowing": ["a locked drawer"],
+                    "must_preserve": ["first-person voice"],
+                    "style_notes": ["short paragraphs"],
+                }
+            )
+
+        if prompt.startswith("You are a story director"):
+            skills = self._extract_skill_names(prompt)
+            selected = skills[0] if skills else "unknown"
+            return json.dumps(
+                {
+                    "intent": "Increase tension while preserving continuity",
+                    "focus_character": "Sample Protagonist",
+                    "scene_goal": "Reveal a clue and raise a question",
+                    "selected_skill": selected,
+                    "reason": "First listed skill keeps behavior deterministic",
+                    "avoid": ["ending the story"],
+                    "ending_style": "hook",
+                    "length_target": "short",
+                }
+            )
+
+        if prompt.startswith("Lightly polish the passage"):
+            return "The letter slid free, and a single line changed everything."
+
+        return "The drawer clicked open, and the envelope waited beneath the dust."
+
+    @staticmethod
+    def _extract_skill_names(prompt: str) -> list[str]:
+        marker = "Output JSON only with this exact shape:"
+        if marker not in prompt:
+            return []
+        prefix = prompt.split(marker, 1)[0]
+        lines = [line.strip() for line in prefix.splitlines() if line.strip()]
+        if not lines:
+            return []
+        raw = lines[-1]
+        try:
+            parsed = ast.literal_eval(raw)
+        except (SyntaxError, ValueError):
+            return []
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed]
+        return []
